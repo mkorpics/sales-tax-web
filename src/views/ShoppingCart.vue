@@ -6,17 +6,11 @@
       Error loading page. Please refresh and try again.
     </div>
     <div v-else>
-      <input type="text" v-model="newItem.itemName" />
-      <select v-model="newItem.itemTypeId">
-        <option value="1">Book</option>
-      </select>
-      <input type="number" v-model="newItem.price" />
-      <button @click="onAddNewItemBtnClick">ADD</button>
-
+        <!-- todo: make more generic to display purchase item data so can use on order summary? -->
       <shopping-cart-item
         v-for="(item, index) in items"
-        :key="item.itemId"
-        :item="item"
+        :key="item.purchaseItemId"
+        :purchaseItem="item"
         @removeItem="onRemoveItemBtnClick(item, index)"
       >
       </shopping-cart-item>
@@ -27,12 +21,12 @@
 
 <script lang="ts">
 import { Component, Vue } from "vue-property-decorator";
-import { Item } from "../models/Item";
-import { ItemInput } from "../models/ItemInput";
-import { ItemType } from "../models/ItemType";
 import { ShoppingCartItemStore } from "../stores/ShoppingCartItemStore";
 import ShoppingCartItem from "../components/ShoppingCartItem.vue";
 import { OrderStore } from "../stores/OrderStore";
+import { PurchaseItem } from "../models/PurchaseItem";
+import router from "../router";
+import { Order } from "../models/Order";
 
 @Component({
   components: {
@@ -40,9 +34,7 @@ import { OrderStore } from "../stores/OrderStore";
   },
 })
 export default class ShoppingCart extends Vue {
-  private newItem: Item = new Item();
-  private items: Item[] = [];
-  private itemTypes: ItemType[] = [];
+  private items: PurchaseItem[] = [];
   private isLoading = true;
   private isErrorLoading = false;
 
@@ -52,19 +44,12 @@ export default class ShoppingCart extends Vue {
   }
 
   // Event Handlers
-  private async onAddNewItemBtnClick(): Promise<void> {
+  private async onRemoveItemBtnClick(
+    item: PurchaseItem,
+    index: number
+  ): Promise<void> {
     try {
-      var createdItem: Item = await this.createItem(this.newItem);
-      this.items.push(createdItem);
-      this.newItem = new Item();
-    } catch {
-      // notify error
-    }
-  }
-
-  private async onRemoveItemBtnClick(item: Item, index: number): Promise<void> {
-    try {
-      await this.deleteItemFromShoppingCart(item.itemId);
+      await this.deleteItemFromShoppingCart(item.purchaseItemId);
       this.items.splice(index, 1);
     } catch {
       // notify error
@@ -73,8 +58,13 @@ export default class ShoppingCart extends Vue {
 
   private async onSubmitOrderBtnClick(): Promise<void> {
     try {
-      await this.submitOrder(this.items);
-      // don't refresh items but instead navigate to newly created order?
+      const createdOrder: Order = await this.submitOrder(this.items);
+      router.push({
+        name: "Order",
+        params: {
+          orderId: createdOrder.orderId.toString(),
+        },
+      });
     } catch {
       //notify error
     }
@@ -85,39 +75,20 @@ export default class ShoppingCart extends Vue {
   // API
   private async loadPageData(): Promise<void> {
     try {
-      const itemsPromise: Promise<void> = ShoppingCartItemStore.getAll().then(
-        (response: Item[]) => {
-          this.items = response;
-        }
-      );
-      const itemTypesPromise: Promise<void> = this.getItemTypes();
-      await Promise.all([itemsPromise, itemTypesPromise]);
+      this.items = await ShoppingCartItemStore.getAll();
     } catch {
       this.isErrorLoading = true;
     }
-  }
-
-  private async getItemTypes(): Promise<void> {
-    // ItemTypeStore.getAll();
-  }
-
-  private async createItem(item: Item): Promise<Item> {
-    const itemInput: ItemInput = item.toItemInput();
-    var createdItem: Item = await ShoppingCartItemStore.create(itemInput);
-
-    // todo: REMOVE
-    createdItem = item;
-    createdItem.itemId = (this.items.map((i) => i.itemId)?.pop() || 0) + 1;
-
-    return createdItem;
   }
 
   private async deleteItemFromShoppingCart(itemId: number): Promise<void> {
     await ShoppingCartItemStore.delete(itemId);
   }
 
-  private async submitOrder(items: Item[]): Promise<void> {
-    await OrderStore.create(items);
+  private async submitOrder(items: PurchaseItem[]): Promise<Order> {
+    const itemIds: number[] = items.map((x: PurchaseItem) => x.purchaseItemId);
+    var createdOrder = await OrderStore.create(itemIds);
+    return createdOrder;
   }
 }
 </script>

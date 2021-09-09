@@ -9,28 +9,28 @@ const routes: Array<RouteConfig> = [
     redirect: { name: 'ShoppingCart' },
   },
   {
-    path: '/shoppingcart',
-    name: 'ShoppingCart',
+    path: '/inventory',
+    name: 'Inventory',
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
+    component: () => import(/* webpackChunkName: "inventory" */ '../views/Inventory.vue')
+  },
+  {
+    path: '/shoppingcart',
+    name: 'ShoppingCart',
     component: () => import(/* webpackChunkName: "shoppingcart" */ '../views/ShoppingCart.vue')
   },
   {
     path: '/orderhistory',
     name: 'OrderHistory',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
     component: () => import(/* webpackChunkName: "orderhistory" */ '../views/OrderHistory.vue')
   },
   {
     path: '/orderhistory/:orderId',
     name: 'Order',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "order" */ '../views/Order.vue')
+    component: () => import(/* webpackChunkName: "order" */ '../views/Order.vue'),
+    props: true,
   },
 ]
 

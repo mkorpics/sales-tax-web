@@ -1,19 +1,31 @@
-import { Item } from "@/models/Item";
-import { ItemInput } from "@/models/ItemInput";
+import { PurchaseItem } from "@/models/PurchaseItem";
+import axios, { AxiosResponse } from "axios";
 
 export class SCIStore {
-    private baseControllerUrl: string = 'api/ShoppingCartItems';
+    private baseControllerUrl: string = 'https://localhost:44335/api/ShoppingCartItems';
 
-    public async getAll(): Promise<Item[]> {
-        return [];
+    private headers: { [key: string]: string } = {
+        Accept: 'application/json',
+        'Access-Control-Allow-Origin': '*'
     }
 
-    public async create(input: ItemInput): Promise<Item> {
-        return new Item();
+    public async getAll(): Promise<PurchaseItem[]> {
+        const url: string = `${this.baseControllerUrl}`;
+        const response: AxiosResponse<PurchaseItem[]> = await axios.get(url);
+
+        return response.data.map((x: PurchaseItem) => new PurchaseItem(x));
     }
 
-    public async delete(itemId: number): Promise<void> {
-        // call delete
+    public async addItem(inventoryItemId: number): Promise<PurchaseItem> {
+        const url: string = `${this.baseControllerUrl}/AddInventory`;
+        const response: AxiosResponse<PurchaseItem> = await axios.put(url, inventoryItemId, { headers: { ...this.headers, 'Content-Type': 'application/json' } });
+
+        return new PurchaseItem(response.data);
+    }
+
+    public async delete(purchaseItemId: number): Promise<void> {
+        const url: string = `${this.baseControllerUrl}/${purchaseItemId}`;
+        await axios.delete(url, { headers: this.headers });
     }
 }
 

@@ -1,8 +1,9 @@
 <template>
   <div id="app">
     <div id="nav">
-      <router-link :to="{name: 'ShoppingCart'}">Shopping Cart</router-link> |
-      <router-link :to="{name: 'OrderHistory'}">Order History</router-link>
+      <router-link :to="{ name: 'Inventory' }">Inventory</router-link> |
+      <router-link :to="{ name: 'ShoppingCart' }">Shopping Cart</router-link> |
+      <router-link :to="{ name: 'OrderHistory' }">Order History</router-link>
     </div>
     <router-view/>
   </div>
