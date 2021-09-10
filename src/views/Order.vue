@@ -1,66 +1,82 @@
 <template>
   <div>
-    <div v-if="isLoading">Loading...</div>
-    <div v-else>
-      <div class="m-4">ORDER # {{ order.orderNumber }}</div>
+    <b-overlay :show="isLoading">
+      <div v-if="isErrorLoading">
+        Error loading page. Please refresh and try again.
+      </div>
+      <div v-else>
+        <div class="m-4 fw-bold">ORDER # {{ order.orderNumber }}</div>
 
-      <div class="mb-2">RECIEPT</div>
-      <div>
-        <div
-          v-for="(groupPurchaseItems, itemType) in itemsGroupedByType"
-          :key="itemType"
-        >
+        <div class="mb-2">RECIEPT</div>
+        <div>
           <div
-            v-for="(priceGroupPurchaseItems, price) in getItemsGroupedByPrice(
-              groupPurchaseItems
-            )"
-            :key="price"
+            v-for="(groupPurchaseItems, itemType) in itemsGroupedByType"
+            :key="itemType"
           >
-            <b-row>
-              <b-col cols>
-              {{ itemType }}
-              </b-col>
-              <b-col cols>
-              {{ price * calculateTotalNumberOfItems(priceGroupPurchaseItems) }}
-              <span
-                v-if="calculateTotalNumberOfItems(priceGroupPurchaseItems) > 1"
-              >
-                ({{ calculateTotalNumberOfItems(priceGroupPurchaseItems) }} @
-                {{ price }})
-              </span>
-              </b-col>
-            </b-row>
+            <div
+              v-for="(priceGroupPurchaseItems, price) in getItemsGroupedByPrice(
+                groupPurchaseItems
+              )"
+              :key="price"
+            >
+              <b-row class="mx-auto" style="max-width: 600px">
+                <b-col cols class="text-start">
+                  {{ itemType }}
+                </b-col>
+                <b-col cols class="text-end">
+                  {{ calculatePriceGroupTotal(price, priceGroupPurchaseItems) }}
+                  <span
+                    v-if="
+                      calculateTotalNumberOfItems(priceGroupPurchaseItems) > 1
+                    "
+                  >
+                    (
+                    {{ calculateTotalNumberOfItems(priceGroupPurchaseItems) }}
+                    @ {{ price }})
+                  </span>
+                </b-col>
+              </b-row>
+            </div>
           </div>
         </div>
+
+        <b-row class="mx-auto mt-5" style="max-width: 300px">
+          <b-col cols class="text-start"> Total Sales Tax: </b-col>
+          <b-col cols class="text-end">
+            {{ formatAsCurrency(order.totalSalesTax) }}
+          </b-col>
+        </b-row>
+        <b-row class="mx-auto" style="max-width: 300px">
+          <b-col cols class="text-start">Total: </b-col>
+          <b-col cols class="text-end">
+            {{ formatAsCurrency(order.orderTotal) }}
+          </b-col>
+        </b-row>
+
+        <b-button class="m-5" @click="onViewBtnClick">
+          {{ showAllItems ? "Hide" : "View" }} All Items
+        </b-button>
+
+        <b-table
+          v-show="showAllItems"
+          responsive
+          hover
+          sort-icon-left
+          show-empty
+          sort-by="inventoryItem.inventoryItemName"
+          :sort-compare-options="{ sensitivity: 'base' }"
+          no-sort-reset
+          :items="order.items"
+          :fields="tableFields"
+        >
+          <template #cell(addToCart)="{ item }">
+            <b-button class="btn-danger" @click="onRemoveItemBtnClick(item)">
+              X
+            </b-button>
+          </template>
+        </b-table>
       </div>
-
-      <div>Total Sales Tax: {{ formatAsCurrency(order.totalSalesTax) }}</div>
-      <div>Total: {{ formatAsCurrency(order.orderTotal) }}</div>
-
-      <b-button class="m-5" @click="onViewBtnClick">
-        {{ showAllItems ? "Hide" : "View" }} All Items
-      </b-button>
-
-      <b-table
-        v-show="showAllItems"
-        responsive
-        hover
-        sticky-header
-        sort-icon-left
-        show-empty
-        sort-by="inventoryItem.inventoryItemName"
-        :sort-compare-options="{ sensitivity: 'base' }"
-        no-sort-reset
-        :items="order.items"
-        :fields="tableFields"
-      >
-        <template #cell(addToCart)="{ item }">
-          <b-button class="btn-danger" @click="onRemoveItemBtnClick(item)">
-            X
-          </b-button>
-        </template>
-      </b-table>
-    </div>
+    </b-overlay>
   </div>
 </template>
 
@@ -72,6 +88,7 @@ import { OrderStore } from "../stores/OrderStore";
 import { groupBy } from "lodash";
 import { PurchaseItem } from "../models/PurchaseItem";
 import { BvTableFieldArray } from "bootstrap-vue";
+import { round } from "lodash";
 
 @Component
 export default class OrderView extends Vue {
@@ -80,7 +97,9 @@ export default class OrderView extends Vue {
 
   private order: Order = new Order();
   private showAllItems: boolean = false;
+
   private isLoading: boolean = true;
+  private isErrorLoading: boolean = false;
 
   private tableFields: BvTableFieldArray = [
     {
@@ -134,13 +153,20 @@ export default class OrderView extends Vue {
     const priceGroups = groupBy(items, (x: PurchaseItem) => [
       x.inventoryItem.price,
     ]);
-    console.log(priceGroups);
     return priceGroups;
   }
 
   private calculateTotalNumberOfItems(items: PurchaseItem[]) {
     const quantityList: number[] = items.map((x: PurchaseItem) => x.quantity);
     return quantityList.reduce((sum, quantity) => (sum += quantity), 0);
+  }
+
+  private calculatePriceGroupTotal(
+    price: number,
+    items: PurchaseItem[]
+  ): number {
+    const total: number = price * this.calculateTotalNumberOfItems(items);
+    return round(total, 2);
   }
 
   private formatAsCurrency(input: number) {
@@ -150,8 +176,9 @@ export default class OrderView extends Vue {
   private async loadPageData(): Promise<void> {
     try {
       this.order = await OrderStore.get(this.orderId);
-    } catch {
-      // notify error
+    } catch (e) {
+      console.debug(e);
+      this.isErrorLoading = true;
     }
   }
 }

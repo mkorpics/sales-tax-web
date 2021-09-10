@@ -1,11 +1,43 @@
 <template>
   <div>
-    ORDER HISTORY
+    <b-overlay :show="isLoading">
+      <div class="m-4">ORDER HISTORY</div>
+      <div v-if="isErrorLoading">
+        Error loading page. Please refresh and try again.
+      </div>
+      <div v-else>
+        <b-row>
+          <b-col
+            :cols="bootstrapColsValue"
+            v-for="order in orders"
+            :key="order.orderId"
+          >
+            <b-card
+              class="text-center mb-4"
+              :sub-title="'ORDER # ' + order.orderNumber"
+            >
+              <div class="bg-secondary text-light p-3">
+                <div>
+                  <span class="">Number of Items: </span>
+                  {{ order.items.length }}
+                </div>
 
-    <div v-for="order in orders" :key="order.orderId">
-      {{ order.orderNumber }} - {{ formatAsCurrency(order.orderTotal) }}
-      <button @click="onViewRecieptBtnClick(order)">View Reciept</button>
-    </div>
+                <span class="fw-bold">Total: </span>
+                {{ formatAsCurrency(order.orderTotal) }}
+              </div>
+              <template #footer>
+                <b-link
+                  class="card-link text-dark fs-6"
+                  @click="onViewRecieptBtnClick(order)"
+                >
+                  VIEW RECIEPT
+                </b-link>
+              </template>
+            </b-card>
+          </b-col>
+        </b-row>
+      </div>
+    </b-overlay>
   </div>
 </template>
 
@@ -21,7 +53,19 @@ import { OrderStore } from "../stores/OrderStore";
 })
 export default class OrderHistory extends Vue {
   private orders: Order[] = [];
+
   private isLoading: boolean = true;
+  private isErrorLoading: boolean = false;
+
+  private get bootstrapColsValue(): number {
+    if (this.orders.length < 2) {
+      return 12;
+    }
+    if (this.orders.length === 2) {
+      return 6;
+    }
+    return 4;
+  }
 
   private async created(): Promise<void> {
     await this.loadPageData();
@@ -44,8 +88,9 @@ export default class OrderHistory extends Vue {
   private async loadPageData(): Promise<void> {
     try {
       this.orders = await OrderStore.getAll();
-    } catch {
-      // notify error
+    } catch (e) {
+      console.debug(e);
+      this.isErrorLoading = true;
     }
   }
 }

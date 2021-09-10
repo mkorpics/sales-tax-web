@@ -7,10 +7,13 @@
         Error loading page. Please refresh and try again.
       </div>
       <div v-else>
+        <b-alert v-model="showErrorAlert" variant="danger" dismissible>
+          {{ errorAlertMsg }}
+        </b-alert>
+
         <b-table
           responsive
           hover
-          sticky-header
           sort-icon-left
           show-empty
           sort-by="inventoryItem.inventoryItemName"
@@ -44,8 +47,11 @@ import NumericUtility from "../services/NumericUtility";
 @Component
 export default class ShoppingCart extends Vue {
   private items: PurchaseItem[] = [];
+
   private isLoading = true;
   private isErrorLoading = false;
+  private showErrorAlert: boolean = false;
+  private errorAlertMsg: string = "";
 
   private tableFields: BvTableFieldArray = [
     {
@@ -87,7 +93,6 @@ export default class ShoppingCart extends Vue {
     this.isLoading = false;
   }
 
-  // Event Handlers
   private async onRemoveItemBtnClick(item: PurchaseItem): Promise<void> {
     try {
       await this.deleteItemFromShoppingCart(item.purchaseItemId);
@@ -95,8 +100,10 @@ export default class ShoppingCart extends Vue {
         (x: PurchaseItem) => x.purchaseItemId === item.purchaseItemId
       );
       this.items.splice(index, 1);
-    } catch {
-      // notify error
+    } catch (e) {
+      console.debug(e);
+      this.errorAlertMsg = "Delete failed. Please try again.";
+      this.showErrorAlert = true;
     }
   }
 
@@ -109,18 +116,18 @@ export default class ShoppingCart extends Vue {
           orderId: createdOrder.orderId.toString(),
         },
       });
-    } catch {
-      //notify error
+    } catch (e) {
+      console.debug(e);
+      this.errorAlertMsg = "Failed to create order. Please try again.";
+      this.showErrorAlert = true;
     }
   }
 
-  // Utilities
-
-  // API
   private async loadPageData(): Promise<void> {
     try {
       this.items = await ShoppingCartItemStore.getAll();
-    } catch {
+    } catch (e) {
+      console.debug(e);
       this.isErrorLoading = true;
     }
   }

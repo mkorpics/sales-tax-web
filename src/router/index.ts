@@ -6,7 +6,7 @@ Vue.use(VueRouter)
 const routes: Array<RouteConfig> = [
   {
     path: '/',
-    redirect: { name: 'ShoppingCart' },
+    redirect: { name: 'Inventory' },
   },
   {
     path: '/inventory',

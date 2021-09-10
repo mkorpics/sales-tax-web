@@ -20,7 +20,7 @@
             :options="itemTypes"
             value-field="itemTypeId"
             text-field="itemTypeName"
-            class="form-control"
+            class="form-select"
             required
           >
             <template #first>
@@ -39,10 +39,16 @@
           <b-button @click="onAddNewItemBtnClick">ADD</b-button>
         </div>
 
+        <b-alert v-model="showSuccessAlert" variant="success" dismissible>
+          {{ successAlertMsg }}
+        </b-alert>
+        <b-alert v-model="showErrorAlert" variant="danger" dismissible>
+          {{ errorAlertMsg }}
+        </b-alert>
+
         <b-table
           responsive
           hover
-          sticky-header
           sort-icon-left
           show-empty
           sort-by="inventoryItemName"
@@ -52,9 +58,12 @@
           :fields="tableFields"
         >
           <template #cell(actionBtns)="{ item }">
-            <span v-b-popover.hover="item.canDelete ? '' : 'Item is in the shopping cart or on an order.'">
+            <span
+              v-b-popover.hover="item.canDelete ? ''
+                  : 'Item is in the shopping cart or on an order.'"
+            >
               <b-button
-                class="btn-danger"
+                class="btn-danger me-1"
                 :disabled="!item.canDelete"
                 @click="onRemoveItemBtnClick(item)"
                 >X
@@ -86,8 +95,13 @@ export default class Inventory extends Vue {
   private newItem: InventoryItem = new InventoryItem();
   private items: InventoryItem[] = [];
   private itemTypes: ItemType[] = [];
+
   private isLoading = true;
   private isErrorLoading = false;
+  private showSuccessAlert: boolean = false;
+  private showErrorAlert: boolean = false;
+  private successAlertMsg: string = "";
+  private errorAlertMsg: string = "";
 
   private tableFields: BvTableFieldArray = [
     {
@@ -131,14 +145,20 @@ export default class Inventory extends Vue {
       this.items.push(createdItem);
       this.newItem = new InventoryItem();
     } catch (e) {
-      // notify error
-      console.log(e);
+      console.debug(e);
+      this.errorAlertMsg =
+        "Error adding inventory item. " +
+        "Please make sure the Type and Price fields are filled out. " +
+        "The Price cannot contain more than 2 decimals and must be greater than 0.";
+      this.showErrorAlert = true;
     }
   }
 
   private async onRemoveItemBtnClick(item: InventoryItem): Promise<void> {
     if (!item.canDelete) {
-      // notify error
+      this.errorAlertMsg =
+        "Item is in shopping cart or on order and cannot be deleted.";
+      this.showErrorAlert = true;
     }
     try {
       await this.deleteItemFromInventory(item.inventoryItemId);
@@ -146,8 +166,10 @@ export default class Inventory extends Vue {
         (x: InventoryItem) => x.inventoryItemId === item.inventoryItemId
       );
       this.items.splice(index, 1);
-    } catch {
-      // notify error
+    } catch (e) {
+      console.debug(e);
+      this.errorAlertMsg = "Delete failed. Please try again.";
+      this.showErrorAlert = true;
     }
   }
 
@@ -155,9 +177,16 @@ export default class Inventory extends Vue {
     try {
       await this.addItemToCart(item);
       item.canDelete = false;
-      // notify success
-    } catch {
-      //notify error
+      this.successAlertMsg = `${
+        item.inventoryItemName || item.itemType.itemTypeName
+      } added to the cart.`;
+      this.showSuccessAlert = true;
+    } catch (e) {
+      console.debug(e);
+      this.errorAlertMsg = `${
+        item.inventoryItemName || item.itemType.itemTypeName
+      } was not added to the cart. Please try again.`;
+      this.showErrorAlert = true;
     }
   }
 
