@@ -39,9 +39,6 @@
           <b-button @click="onAddNewItemBtnClick">ADD</b-button>
         </div>
 
-        <b-alert v-model="showSuccessAlert" variant="success" dismissible>
-          {{ successAlertMsg }}
-        </b-alert>
         <b-alert v-model="showErrorAlert" variant="danger" dismissible>
           {{ errorAlertMsg }}
         </b-alert>
@@ -57,10 +54,38 @@
           :items="items"
           :fields="tableFields"
         >
+          <template #cell(shoppingCart)="{ item }">
+            <b-icon
+              v-if="getNumberOfItemsInShoppingCart(item) === 0"
+              icon="cart4"
+              class="cursor--pointer"
+              @click="onAddToCartBtnClick(item)"
+            >
+            </b-icon>
+            <span v-else>
+              <b-icon
+                icon="dash-circle"
+                class="cursor--pointer"
+                @click="onDecrementCartBtnClick(item)"
+              >
+              </b-icon>
+              {{ getNumberOfItemsInShoppingCart(item) }}
+              <b-icon
+                icon="plus-circle"
+                class="cursor--pointer"
+                @click="onIncrementCartBtnClick(item)"
+              >
+              </b-icon>
+            </span>
+          </template>
+
           <template #cell(actionBtns)="{ item }">
             <span
-              v-b-popover.hover="item.canDelete ? ''
-                  : 'Item is in the shopping cart or on an order.'"
+              v-b-popover.hover="
+                item.canDelete
+                  ? ''
+                  : 'Item is in the shopping cart or on an order.'
+              "
             >
               <b-button
                 class="btn-danger me-1"
@@ -69,9 +94,6 @@
                 >X
               </b-button>
             </span>
-            <b-button @click="onAddToCartBtnClick(item)">
-              ADD TO CART
-            </b-button>
           </template>
         </b-table>
       </div>
@@ -89,18 +111,18 @@ import { InventoryItemStore } from "../stores/InventoryItemStore";
 import { ShoppingCartItemStore } from "../stores/ShoppingCartItemStore";
 import { BvTableFieldArray } from "bootstrap-vue";
 import NumericUtility from "../services/NumericUtility";
+import { PurchaseItem } from "../models/PurchaseItem";
 
 @Component
 export default class Inventory extends Vue {
   private newItem: InventoryItem = new InventoryItem();
   private items: InventoryItem[] = [];
+  private shoppingCartItems: PurchaseItem[] = [];
   private itemTypes: ItemType[] = [];
 
   private isLoading = true;
   private isErrorLoading = false;
-  private showSuccessAlert: boolean = false;
   private showErrorAlert: boolean = false;
-  private successAlertMsg: string = "";
   private errorAlertMsg: string = "";
 
   private tableFields: BvTableFieldArray = [
@@ -123,10 +145,14 @@ export default class Inventory extends Vue {
     },
     {
       key: "totalPrice",
-      label: "Total Price",
+      label: "Price With Tax",
       sortable: true,
       sortByFormatted: true,
       formatter: (value: number) => NumericUtility.formatAsCurrency(value),
+    },
+    {
+      key: "shoppingCart",
+      label: "Cart",
     },
     {
       key: "actionBtns",
@@ -174,20 +200,46 @@ export default class Inventory extends Vue {
   }
 
   private async onAddToCartBtnClick(item: InventoryItem): Promise<void> {
+    await this.updateInventoryItemCountInShoppingCart(item, true);
+  }
+
+  private async onDecrementCartBtnClick(item: InventoryItem): Promise<void> {
+    await this.updateInventoryItemCountInShoppingCart(item, false);
+  }
+
+  private async onIncrementCartBtnClick(item: InventoryItem): Promise<void> {
+    await this.updateInventoryItemCountInShoppingCart(item, true);
+  }
+
+  private async updateInventoryItemCountInShoppingCart(
+    item: InventoryItem,
+    increaseCount: boolean
+  ): Promise<void> {
     try {
-      await this.addItemToCart(item);
-      item.canDelete = false;
-      this.successAlertMsg = `${
-        item.inventoryItemName || item.itemType.itemTypeName
-      } added to the cart.`;
-      this.showSuccessAlert = true;
+      var updatedPurchaseItem: PurchaseItem = await this.upsertItemInCart(
+        item,
+        increaseCount
+      );
+      item.canDelete = !updatedPurchaseItem;
+      await this.getShoppingCartItems(); // todo: ok to just call to load this list, or should I manually update it?
     } catch (e) {
       console.debug(e);
-      this.errorAlertMsg = `${
-        item.inventoryItemName || item.itemType.itemTypeName
-      } was not added to the cart. Please try again.`;
+      const itemDisplayText: string =
+        item.inventoryItemName || item.itemType?.itemTypeName || 'Item';
+      const actionText: string = increaseCount ? "added to" : "removed from";
+      this.errorAlertMsg = `${itemDisplayText} was not ${actionText} the cart. Please try again.`;
       this.showErrorAlert = true;
     }
+  }
+
+  private getNumberOfItemsInShoppingCart(item: InventoryItem): number {
+    const shoppingCartItem: PurchaseItem | undefined = this.shoppingCartItems.find(
+      (x: PurchaseItem) => x.inventoryItemId === item.inventoryItemId
+    );
+    if (!shoppingCartItem) {
+      return 0;
+    }
+    return shoppingCartItem.quantity;
   }
 
   private async loadPageData(): Promise<void> {
@@ -202,10 +254,20 @@ export default class Inventory extends Vue {
           this.itemTypes = response;
         }
       );
-      await Promise.all([itemsPromise, itemTypesPromise]);
+      const shoppingCartItemsPromise: Promise<void> =
+        this.getShoppingCartItems();
+      await Promise.all([
+        itemsPromise,
+        itemTypesPromise,
+        shoppingCartItemsPromise,
+      ]);
     } catch {
       this.isErrorLoading = true;
     }
+  }
+
+  private async getShoppingCartItems(): Promise<void> {
+    this.shoppingCartItems = await ShoppingCartItemStore.getAll();
   }
 
   private async createItem(item: InventoryItem): Promise<InventoryItem> {
@@ -218,8 +280,16 @@ export default class Inventory extends Vue {
     await InventoryItemStore.delete(itemId);
   }
 
-  private async addItemToCart(item: InventoryItem): Promise<void> {
-    await ShoppingCartItemStore.addItem(item.inventoryItemId);
+  private async upsertItemInCart(
+    item: InventoryItem,
+    increaseCount: boolean
+  ): Promise<PurchaseItem> {
+    var updatedPurchaseItem: PurchaseItem =
+      await ShoppingCartItemStore.upsertInventory(
+        item.inventoryItemId,
+        increaseCount
+      );
+    return updatedPurchaseItem;
   }
 }
 </script>

@@ -16,10 +16,11 @@ export class SCIStore {
         return response.data.map((x: PurchaseItem) => new PurchaseItem(x));
     }
 
-    public async addItem(inventoryItemId: number): Promise<PurchaseItem> {
-        const url: string = `${this.baseControllerUrl}/AddInventory`;
+    public async upsertInventory(inventoryItemId: number, increaseCount: boolean): Promise<PurchaseItem> {
+        const url: string = `${this.baseControllerUrl}/UpsertInventory?increaseCount=${increaseCount}`;
         const response: AxiosResponse<PurchaseItem> = await axios.put(url, inventoryItemId, { headers: { ...this.headers, 'Content-Type': 'application/json' } });
 
+        if (!response.data) { return response.data; }
         return new PurchaseItem(response.data);
     }
 

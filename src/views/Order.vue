@@ -134,7 +134,7 @@ export default class OrderView extends Vue {
 
   private get itemsGroupedByType(): { [key: string]: PurchaseItem[] } {
     return groupBy(this.order.items, (x: PurchaseItem) => [
-      x.inventoryItem.itemType.itemTypeName,
+      x?.inventoryItem?.itemType?.itemTypeName || "",
     ]);
   }
 
@@ -151,7 +151,7 @@ export default class OrderView extends Vue {
     [key: number]: PurchaseItem[];
   } {
     const priceGroups = groupBy(items, (x: PurchaseItem) => [
-      x.inventoryItem.price,
+      x?.inventoryItem?.price || 0,
     ]);
     return priceGroups;
   }

@@ -22,6 +22,21 @@
           :items="items"
           :fields="tableFields"
         >
+          <template #cell(quantity)="{ item }">
+            <b-icon
+              icon="dash-circle"
+              class="cursor--pointer"
+              @click="onDecrementCartBtnClick(item)"
+            >
+            </b-icon>
+            {{ item.quantity }}
+            <b-icon
+              icon="plus-circle"
+              class="cursor--pointer"
+              @click="onIncrementCartBtnClick(item)"
+            >
+            </b-icon>
+          </template>
           <template #cell(actionBtns)="{ item }">
             <b-button class="btn-danger" @click="onRemoveItemBtnClick(item)">
               X
@@ -93,6 +108,14 @@ export default class ShoppingCart extends Vue {
     this.isLoading = false;
   }
 
+  private async onDecrementCartBtnClick(item: PurchaseItem): Promise<void> {
+    await this.updateInventoryItemCountInShoppingCart(item, false);
+  }
+
+  private async onIncrementCartBtnClick(item: PurchaseItem): Promise<void> {
+    await this.updateInventoryItemCountInShoppingCart(item, true);
+  }
+
   private async onRemoveItemBtnClick(item: PurchaseItem): Promise<void> {
     try {
       await this.deleteItemFromShoppingCart(item.purchaseItemId);
@@ -123,6 +146,41 @@ export default class ShoppingCart extends Vue {
     }
   }
 
+  private async updateInventoryItemCountInShoppingCart(
+    purchaseItem: PurchaseItem,
+    increaseCount: boolean
+  ): Promise<void> {
+    try {
+      var updatedPurchaseItem: PurchaseItem = await this.upsertItemInCart(
+        purchaseItem.inventoryItemId,
+        increaseCount
+      );
+
+      const indexOfPurchaseItem: number = this.items.findIndex(
+        (x: PurchaseItem) => x.purchaseItemId === purchaseItem.purchaseItemId
+      );
+      if (!updatedPurchaseItem && indexOfPurchaseItem !== -1) {
+        this.items.splice(indexOfPurchaseItem, 1);
+      } else if (updatedPurchaseItem) {
+        if (indexOfPurchaseItem === -1) {
+          this.items.push(updatedPurchaseItem);
+        } else {
+          this.items.splice(indexOfPurchaseItem, 1, updatedPurchaseItem);
+        }
+      }
+      // this.items = await ShoppingCartItemStore.getAll(); // todo: ok to just call to load this list, or should I manually update it?
+    } catch (e) {
+      console.debug(e);
+      const itemDisplayText: string =
+        purchaseItem?.inventoryItem?.inventoryItemName ||
+        purchaseItem?.inventoryItem?.itemType?.itemTypeName ||
+        "Item";
+      const actionText: string = increaseCount ? "added to" : "removed from";
+      this.errorAlertMsg = `${itemDisplayText} was not ${actionText} the cart. Please try again.`;
+      this.showErrorAlert = true;
+    }
+  }
+
   private async loadPageData(): Promise<void> {
     try {
       this.items = await ShoppingCartItemStore.getAll();
@@ -140,6 +198,18 @@ export default class ShoppingCart extends Vue {
     const itemIds: number[] = items.map((x: PurchaseItem) => x.purchaseItemId);
     var createdOrder = await OrderStore.create(itemIds);
     return createdOrder;
+  }
+
+  private async upsertItemInCart(
+    inventoryItemId: number,
+    increaseCount: boolean
+  ): Promise<PurchaseItem> {
+    var updatedPurchaseItem: PurchaseItem =
+      await ShoppingCartItemStore.upsertInventory(
+        inventoryItemId,
+        increaseCount
+      );
+    return updatedPurchaseItem;
   }
 }
 </script>
