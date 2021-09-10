@@ -1,11 +1,15 @@
 <template>
   <div id="app">
-    <div id="nav">
-      <router-link :to="{ name: 'Inventory' }">Inventory</router-link> |
-      <router-link :to="{ name: 'ShoppingCart' }">Shopping Cart</router-link> |
-      <router-link :to="{ name: 'OrderHistory' }">Order History</router-link>
-    </div>
-    <router-view/>
+    <b-navbar sticky type="dark" variant="dark">
+      <b-collapse id="nav-collapse" is-nav>
+        <b-navbar-nav fill justified class="w-100">
+          <b-nav-item :to="{ name: 'Inventory' }">Inventory</b-nav-item>
+          <b-nav-item :to="{ name: 'ShoppingCart' }">Shopping Cart</b-nav-item>
+          <b-nav-item :to="{ name: 'OrderHistory' }">Order History</b-nav-item>
+        </b-navbar-nav>
+      </b-collapse>
+    </b-navbar>
+    <router-view />
   </div>
 </template>
 
@@ -16,18 +20,5 @@
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-}
-
-#nav {
-  padding: 30px;
-
-  a {
-    font-weight: bold;
-    color: #2c3e50;
-
-    &.router-link-exact-active {
-      color: #42b983;
-    }
-  }
 }
 </style>

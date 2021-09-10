@@ -2,9 +2,9 @@
   <div>
     <div v-if="isLoading">Loading...</div>
     <div v-else>
-      ORDER NUMBER: {{ order.orderNumber }}
+      <div class="m-4">ORDER # {{ order.orderNumber }}</div>
 
-      <div>RECIEPT</div>
+      <div class="mb-2">RECIEPT</div>
       <div>
         <div
           v-for="(groupPurchaseItems, itemType) in itemsGroupedByType"
@@ -16,26 +16,50 @@
             )"
             :key="price"
           >
-            {{ itemType }}: {{ price * calculateTotalNumberOfItems(priceGroupPurchaseItems) }}
-            <span v-if="calculateTotalNumberOfItems(priceGroupPurchaseItems) > 1"
-              >({{ calculateTotalNumberOfItems(priceGroupPurchaseItems)}} @ {{ price }})</span
-            >
+            <b-row>
+              <b-col cols>
+              {{ itemType }}
+              </b-col>
+              <b-col cols>
+              {{ price * calculateTotalNumberOfItems(priceGroupPurchaseItems) }}
+              <span
+                v-if="calculateTotalNumberOfItems(priceGroupPurchaseItems) > 1"
+              >
+                ({{ calculateTotalNumberOfItems(priceGroupPurchaseItems) }} @
+                {{ price }})
+              </span>
+              </b-col>
+            </b-row>
           </div>
-        </div>
-      </div>
-      <button @click="onViewBtnClick">View All Items</button>
-      <div v-show="showAllItems">
-        <div v-for="item in order.items" :key="item.purchaseItemId">
-          <span>{{ item.inventoryItem.inventoryItemName }}</span> |
-          <span>{{ item.inventoryItem.itemType.itemTypeName }}</span> |
-          <span>{{ formatAsCurrency(item.inventoryItem.totalPrice) }}</span> |
-          <span>{{ item.quantity }}</span> |
-          <span> {{ formatAsCurrency(item.totalPrice) }}</span>
         </div>
       </div>
 
       <div>Total Sales Tax: {{ formatAsCurrency(order.totalSalesTax) }}</div>
       <div>Total: {{ formatAsCurrency(order.orderTotal) }}</div>
+
+      <b-button class="m-5" @click="onViewBtnClick">
+        {{ showAllItems ? "Hide" : "View" }} All Items
+      </b-button>
+
+      <b-table
+        v-show="showAllItems"
+        responsive
+        hover
+        sticky-header
+        sort-icon-left
+        show-empty
+        sort-by="inventoryItem.inventoryItemName"
+        :sort-compare-options="{ sensitivity: 'base' }"
+        no-sort-reset
+        :items="order.items"
+        :fields="tableFields"
+      >
+        <template #cell(addToCart)="{ item }">
+          <b-button class="btn-danger" @click="onRemoveItemBtnClick(item)">
+            X
+          </b-button>
+        </template>
+      </b-table>
     </div>
   </div>
 </template>
@@ -47,6 +71,7 @@ import NumericUtility from "../services/NumericUtility";
 import { OrderStore } from "../stores/OrderStore";
 import { groupBy } from "lodash";
 import { PurchaseItem } from "../models/PurchaseItem";
+import { BvTableFieldArray } from "bootstrap-vue";
 
 @Component
 export default class OrderView extends Vue {
@@ -56,6 +81,37 @@ export default class OrderView extends Vue {
   private order: Order = new Order();
   private showAllItems: boolean = false;
   private isLoading: boolean = true;
+
+  private tableFields: BvTableFieldArray = [
+    {
+      key: "inventoryItem.inventoryItemName",
+      label: "Item",
+      sortable: true,
+    },
+    {
+      key: "inventoryItem.itemType.itemTypeName",
+      label: "Type",
+      sortable: true,
+    },
+    {
+      key: "inventoryItem.totalPrice",
+      label: "Price",
+      sortable: true,
+      sortByFormatted: true,
+      formatter: (value: number) => NumericUtility.formatAsCurrency(value),
+    },
+    {
+      key: "quantity",
+      label: "Quantity",
+    },
+    {
+      key: "totalPrice",
+      label: "Total Price",
+      sortable: true,
+      sortByFormatted: true,
+      formatter: (value: number) => NumericUtility.formatAsCurrency(value),
+    },
+  ];
 
   private get itemsGroupedByType(): { [key: string]: PurchaseItem[] } {
     return groupBy(this.order.items, (x: PurchaseItem) => [
@@ -84,7 +140,7 @@ export default class OrderView extends Vue {
 
   private calculateTotalNumberOfItems(items: PurchaseItem[]) {
     const quantityList: number[] = items.map((x: PurchaseItem) => x.quantity);
-    return quantityList.reduce((sum, quantity) => sum += quantity, 0);
+    return quantityList.reduce((sum, quantity) => (sum += quantity), 0);
   }
 
   private formatAsCurrency(input: number) {
