@@ -116,7 +116,6 @@ export default class ShoppingCart extends Vue {
                     this.items.splice(indexOfPurchaseItem, 1, updatedPurchaseItem);
                 }
             }
-            // this.items = await ShoppingCartItemStore.getAll(); // todo: ok to just call to load this list, or should I manually update it?
         } catch (e) {
             console.debug(e);
             const itemDisplayText: string =

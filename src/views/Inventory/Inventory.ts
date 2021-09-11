@@ -117,7 +117,7 @@ export default class Inventory extends Vue {
                 increaseCount
             );
             item.canDelete = !updatedPurchaseItem;
-            await this.getShoppingCartItems(); // todo: ok to just call to load this list, or should I manually update it?
+            await this.getShoppingCartItems();
         } catch (e) {
             console.debug(e);
             const itemDisplayText: string =
