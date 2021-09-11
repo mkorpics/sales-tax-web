@@ -14,22 +14,22 @@ const routes: Array<RouteConfig> = [
     // route level code-splitting
     // this generates a separate chunk (about.[hash].js) for this route
     // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "inventory" */ '../views/Inventory.vue')
+    component: () => import(/* webpackChunkName: "inventory" */ '../views/Inventory/Inventory.vue')
   },
   {
     path: '/shoppingcart',
     name: 'ShoppingCart',
-    component: () => import(/* webpackChunkName: "shoppingcart" */ '../views/ShoppingCart.vue')
+    component: () => import(/* webpackChunkName: "shoppingcart" */ '../views/ShoppingCart/ShoppingCart.vue')
   },
   {
     path: '/orderhistory',
     name: 'OrderHistory',
-    component: () => import(/* webpackChunkName: "orderhistory" */ '../views/OrderHistory.vue')
+    component: () => import(/* webpackChunkName: "orderhistory" */ '../views/OrderHistory/OrderHistory.vue')
   },
   {
     path: '/orderhistory/:orderId',
     name: 'Order',
-    component: () => import(/* webpackChunkName: "order" */ '../views/Order.vue'),
+    component: () => import(/* webpackChunkName: "order" */ '../views/Order/Order.vue'),
     props: true,
   },
 ]
