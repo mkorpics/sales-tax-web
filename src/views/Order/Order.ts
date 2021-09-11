@@ -2,7 +2,7 @@ import { Component, Prop, Vue } from "vue-property-decorator";
 import { Order } from "../../models/Order";
 import NumericUtility from "../../services/NumericUtility";
 import { OrderStore } from "../../stores/OrderStore";
-import { groupBy } from "lodash";
+import { groupBy, sortBy } from "lodash";
 import { PurchaseItem } from "../../models/PurchaseItem";
 import { BvTableFieldArray } from "bootstrap-vue";
 
@@ -49,7 +49,9 @@ export default class OrderView extends Vue {
     ];
 
     private get itemsGroupedByType(): { [key: string]: PurchaseItem[] } {
-        return groupBy(this.order.items, (x: PurchaseItem) => [ // todo: order?
+        const orderedItems: PurchaseItem[] = sortBy(this.order.items, (x: PurchaseItem) =>
+            x?.inventoryItem?.itemType?.itemTypeName);
+        return groupBy(orderedItems, (x: PurchaseItem) => [
             x?.inventoryItem?.itemType?.itemTypeName || "",
         ]);
     }
