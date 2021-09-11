@@ -11,8 +11,8 @@ import NumericUtility from "../../services/NumericUtility";
 export default class ShoppingCart extends Vue {
     private items: PurchaseItem[] = [];
 
-    private isLoading = true;
-    private isErrorLoading = false;
+    private isLoading: boolean = true;
+    private isErrorLoading: boolean = false;
     private showErrorAlert: boolean = false;
     private errorAlertMsg: string = "";
 
