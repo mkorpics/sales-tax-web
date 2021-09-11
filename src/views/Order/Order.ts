@@ -5,7 +5,6 @@ import { OrderStore } from "../../stores/OrderStore";
 import { groupBy } from "lodash";
 import { PurchaseItem } from "../../models/PurchaseItem";
 import { BvTableFieldArray } from "bootstrap-vue";
-import { round } from "lodash";
 
 @Component
 export default class OrderView extends Vue {
@@ -50,7 +49,7 @@ export default class OrderView extends Vue {
     ];
 
     private get itemsGroupedByType(): { [key: string]: PurchaseItem[] } {
-        return groupBy(this.order.items, (x: PurchaseItem) => [
+        return groupBy(this.order.items, (x: PurchaseItem) => [ // todo: order?
             x?.inventoryItem?.itemType?.itemTypeName || "",
         ]);
     }
@@ -68,7 +67,7 @@ export default class OrderView extends Vue {
         [key: number]: PurchaseItem[];
     } {
         const priceGroups = groupBy(items, (x: PurchaseItem) => [
-            x?.inventoryItem?.price || 0,
+            x?.inventoryItem?.totalPrice || 0,
         ]);
         return priceGroups;
     }
@@ -81,9 +80,9 @@ export default class OrderView extends Vue {
     private calculatePriceGroupTotal(
         price: number,
         items: PurchaseItem[]
-    ): number {
+    ): string {
         const total: number = price * this.calculateTotalNumberOfItems(items);
-        return round(total, 2);
+        return total.toFixed(2);
     }
 
     private formatAsCurrency(input: number) {
