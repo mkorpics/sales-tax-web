@@ -39,7 +39,7 @@
           <b-button @click="onAddNewItemBtnClick">ADD</b-button>
         </div>
 
-        <div style="height: 50px;" class="my-2">
+        <div style="height: 50px;" class="mb-2">
           <b-alert v-model="showErrorAlert" show variant="danger" fade dismissible>
             {{ errorAlertMsg }}
           </b-alert>
